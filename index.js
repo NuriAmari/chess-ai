@@ -49,19 +49,20 @@ var onDrop = function(source, target) {
 var aiMove = function() {
     if (game.game_over()) return;
     var moves = game.moves();
-    game.move(moves[0]);
+    var bestMove = moves[0];
+    game.move(bestMove);
     var bestValue = evaluateBoard(game.SQUARES);
     game.undo();
     for (var i = 0; i < moves.length; i++) {
         game.move(moves[i]);
         var value = evaluateBoard(game.SQUARES);
-        //console.log(value);
         if (value >= bestValue) {
             bestValue = value;
-        } else {
-            game.undo();
+            bestMove = moves[i];
         }
+        game.undo();
     }
+    game.move(bestMove);
     window.setTimeout(() => { updateBoard() }, 250);
 }
 
