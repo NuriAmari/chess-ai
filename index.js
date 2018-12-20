@@ -3,7 +3,7 @@ var label = document.getElementById("display");
 var pieceValueMap = new Map();
 var positionsEvaluated = 0;
 var currTotal = 0;
-console.log(game);
+var totalMoves = 0;
 
 pieceValueMap.set('p', 10);
 pieceValueMap.set('n', 30);
@@ -19,8 +19,6 @@ var getPieceValue = function(piece) {
     if (!pieceValue) {
         console.log(piece.type);
     }
-    //console.log("colorCpefficient " + colorCoefficient);
-    //console.log("pieceValue " + pieceValue);
     return colorCoefficient * pieceValue;
 }
 
@@ -38,8 +36,12 @@ var updateBoard = function() {
 }
 
 var restart = function() {
-    label.style.visibility = "hidden";
     game.reset();
+    currTotal = 0;
+    for (var i = 0; i < 64; i++) {
+        pieceValueMap.set(game.SQUARES[i], getPieceValue(game.get(game.SQUARES[i])));
+    }
+    label.style.visibility = "hidden";
     updateBoard();
 }
 
@@ -52,33 +54,49 @@ var onDragStart = function(source, piece, position, orientation) {
 
 var onDrop = function(source, target) {
     // execute the attempted players move
-    var move = game.move({
-        from: source,
-        to: target,
-        promotion: 'q'
-    });
+    var move = Move(game, {from: source, to: target, promotion: 'q'});
     // if its an invald move, "snapback"
     if (!move) return 'snapback';
+    //aiMove();
+    /*var moves = game.moves();
+    var bestTotal = -999999;
+    var bestMove = moves[0];
+    for (var i = 0; i < moves.length; i++) {
+        Move(game, moves[i]);
+        if (currTotal > bestTotal) {
+            bestTotal = currTotal;
+            bestMove = moves[i];
+        }
+        Undo(game, moves[i]);
+    }
+    Move(game, bestMove);
+    window.setTimeout(() => { updateBoard(); }, 250);*/
     aiMove();
 }
 
 var Move = function(board, move) {
+    totalMoves++;
+    console.log(totalMoves);
+    move = board.move(move);
+    if (!move) return move;
     var moveTo = pieceValueMap.get(move.to);
     var moveFrom  = pieceValueMap.get(move.from);
     if (moveTo != 0) {
-        currTotal += moveTo + moveFrom;
+        currTotal -= moveTo;
     }
     pieceValueMap.set(move.to, moveFrom);
     pieceValueMap.set(move.from, 0);
-    board.move(move);
+    return move;
 }
 
 var Undo = function(board, move) {
+    move = board.undo();
+    if (!move) return;
     pieceValueMap.set(move.from, pieceValueMap.get(move.to));
-    board.undo();
-    pieceValueMap.set(move.to, getPieceValue(board.get(move.to)));
-    if (pieceValueMap.get(move.to) != 0) {
-        currTotal += pieceValue.get(move.from) + pieceValue.get(move.to);
+    var revivedPiece = getPieceValue(board.get(move.to));
+    pieceValueMap.set(move.to, revivedPiece);
+    if (revivedPiece != 0) {
+        currTotal += revivedPiece;
     }
 }
 
@@ -88,16 +106,14 @@ var aiMove = function() {
     var moves = game.moves();
     var bestMove = moves[0];
     Move(game, bestMove);
-    var bestValue = recursiveBestMove(game, 1);
+    var bestValue = recursiveBestMove(game, 2);
     Undo(game, bestMove);
-    console.log(0);
     for (var i = 1; i < moves.length; i++) {
-        console.log(i);
         Move(game, moves[i]);
-        var currValue = recursiveBestMove(game, 1);
+        var currValue = recursiveBestMove(game, 2);
         if (currValue > bestValue) {
             bestValue = currValue;
-            bestMove = move[i];
+            bestMove = moves[i];
         }         
         Undo(game, moves[i]);
     }
@@ -124,6 +140,7 @@ var recursiveBestMove = function(board, depth) {
         Undo(board, completeWhiteMove);
         Undo(board, blackMoves[i]);
     }
+    return bestBlackValue;
 }
 
 var whiteMove = function(board) {
@@ -141,7 +158,7 @@ var whiteMove = function(board) {
         }
         Undo(board, whiteMoves[i]);
     }
-    board.move(bestWhiteMove);
+    Move(board, bestWhiteMove);
     return bestWhiteMove;
 }
 
