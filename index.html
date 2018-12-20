@@ -2,12 +2,26 @@
 <html>
     <head>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"></script>
         <script src="./js/chessboard-0.3.0.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"></script>
         <link type="text/css" rel="stylesheet" href="./css/chessboard-0.3.0.css"/>
     </head>
     <body>
+        <p id="display">Game Over!</p>
         <div id="board" style="width: 400px"></div>
+        <button onclick="restart()" id="restart">Restart</button>
         <script src="index.js"></script>
     </body>
+    <style>
+        body {
+            display:flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #board {
+            padding: 30px;
+        }
+    </style>
 </html>
