@@ -1,7 +1,8 @@
 var boardRepresentation, game = new Chess();
 var label = document.getElementById("display"); 
 var pieceValueMap = new Map();
-
+var positionsEvaluated = 0;
+var currTotal = 0;
 console.log(game);
 
 pieceValueMap.set('p', 10);
@@ -10,6 +11,22 @@ pieceValueMap.set('b', 33);
 pieceValueMap.set('r', 50);
 pieceValueMap.set('q', 90);
 pieceValueMap.set('k', 900);
+
+var getPieceValue = function(piece) {
+    if (!piece) return 0;
+    var colorCoefficient = piece.color === "w" ? -1 : 1;
+    var pieceValue = pieceValueMap.get(piece.type);
+    if (!pieceValue) {
+        console.log(piece.type);
+    }
+    //console.log("colorCpefficient " + colorCoefficient);
+    //console.log("pieceValue " + pieceValue);
+    return colorCoefficient * pieceValue;
+}
+
+for (var i = 0; i < 64; i++) {
+    pieceValueMap.set(game.SQUARES[i], getPieceValue(game.get(game.SQUARES[i])));
+}
 
 label.style.visibility = "hidden";
 
@@ -45,45 +62,87 @@ var onDrop = function(source, target) {
     aiMove();
 }
 
+var Move = function(board, move) {
+    var moveTo = pieceValueMap.get(move.to);
+    var moveFrom  = pieceValueMap.get(move.from);
+    if (moveTo != 0) {
+        currTotal += moveTo + moveFrom;
+    }
+    pieceValueMap.set(move.to, moveFrom);
+    pieceValueMap.set(move.from, 0);
+    board.move(move);
+}
+
+var Undo = function(board, move) {
+    pieceValueMap.set(move.from, pieceValueMap.get(move.to));
+    board.undo();
+    pieceValueMap.set(move.to, getPieceValue(board.get(move.to)));
+    if (pieceValueMap.get(move.to) != 0) {
+        currTotal += pieceValue.get(move.from) + pieceValue.get(move.to);
+    }
+}
+
 // make the computer play its turn    
 var aiMove = function() {
     if (game.game_over()) return;
     var moves = game.moves();
     var bestMove = moves[0];
-    game.move(bestMove);
-    var bestValue = evaluateBoard(game.SQUARES);
-    game.undo();
-    for (var i = 0; i < moves.length; i++) {
-        game.move(moves[i]);
-        var value = evaluateBoard(game.SQUARES);
-        if (value >= bestValue) {
-            bestValue = value;
-            bestMove = moves[i];
+    Move(game, bestMove);
+    var bestValue = recursiveBestMove(game, 1);
+    Undo(game, bestMove);
+    console.log(0);
+    for (var i = 1; i < moves.length; i++) {
+        console.log(i);
+        Move(game, moves[i]);
+        var currValue = recursiveBestMove(game, 1);
+        if (currValue > bestValue) {
+            bestValue = currValue;
+            bestMove = move[i];
+        }         
+        Undo(game, moves[i]);
+    }
+    Move(game, bestMove); 
+    window.setTimeout(() => {updateBoard();}, 250);
+}
+
+var recursiveBestMove = function(board, depth) {
+    if (depth <= 0) {
+        return currTotal;
+    }
+    depth--;
+    var blackMoves = board.moves();
+    Move(board, blackMoves[0]);
+    var bestBlackValue = recursiveBestMove(board, depth);
+    Undo(board, blackMoves[0]);
+    for(var i = 1; i < blackMoves.length; i++) {
+        Move(board, blackMoves[i]);
+        var completeWhiteMove = whiteMove(board);
+        var currBlackValue = recursiveBestMove(board, depth);    
+        if (currBlackValue > bestBlackValue) {
+            bestBlackValue = currBlackValue;
         }
-        game.undo();
+        Undo(board, completeWhiteMove);
+        Undo(board, blackMoves[i]);
     }
-    game.move(bestMove);
-    window.setTimeout(() => { updateBoard() }, 250);
 }
 
-var evaluateBoard = function(squares) {
-    var total = 0;
-    for (var i = 0; i < 64; i++) {
-        total += getPieceValue(game.get(squares[i]));
+var whiteMove = function(board) {
+    var whiteMoves = board.moves();
+    var bestWhiteMove = whiteMoves[0];
+    Move(board, bestWhiteMove);
+    var bestWhiteValue = currTotal;
+    Undo(board, bestWhiteMove);
+    for (var i = 1; i < whiteMoves.length; i++) {
+        Move(board, whiteMoves[i]);
+        var currWhiteValue = currTotal;
+        if (currWhiteValue < bestWhiteValue) {
+            bestWhiteValue = currWhiteValue;
+            bestWhiteMove = whiteMoves[i];
+        }
+        Undo(board, whiteMoves[i]);
     }
-    return total;
-}
-
-var getPieceValue = function(piece) {
-    if (!piece) return 0;
-    var colorCoefficient = piece.color === "w" ? -1 : 1;
-    var pieceValue = pieceValueMap.get(piece.type);
-    if (!pieceValue) {
-        console.log(piece.type);
-    }
-    //console.log("colorCpefficient " + colorCoefficient);
-    //console.log("pieceValue " + pieceValue);
-    return colorCoefficient * pieceValue;
+    board.move(bestWhiteMove);
+    return bestWhiteMove;
 }
 
 const config = {
