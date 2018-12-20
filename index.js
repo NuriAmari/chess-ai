@@ -75,8 +75,6 @@ var onDrop = function(source, target) {
 }
 
 var Move = function(board, move) {
-    totalMoves++;
-    console.log(totalMoves);
     move = board.move(move);
     if (!move) return move;
     var moveTo = pieceValueMap.get(move.to);
@@ -106,11 +104,13 @@ var aiMove = function() {
     var moves = game.moves();
     var bestMove = moves[0];
     Move(game, bestMove);
-    var bestValue = recursiveBestMove(game, 2);
+    var bestValue = recursiveBestMove(game, 3, -99999);
     Undo(game, bestMove);
+    console.log(0);
     for (var i = 1; i < moves.length; i++) {
+        console.log(i);
         Move(game, moves[i]);
-        var currValue = recursiveBestMove(game, 2);
+        var currValue = recursiveBestMove(game, 3, bestValue);
         if (currValue > bestValue) {
             bestValue = currValue;
             bestMove = moves[i];
@@ -121,19 +121,19 @@ var aiMove = function() {
     window.setTimeout(() => {updateBoard();}, 250);
 }
 
-var recursiveBestMove = function(board, depth) {
-    if (depth <= 0) {
+var recursiveBestMove = function(board, depth, bestValue) {
+    if (depth <= 0 || currTotal <= bestValue) {
         return currTotal;
     }
-    depth--;
+    depth -= 2;
     var blackMoves = board.moves();
     Move(board, blackMoves[0]);
-    var bestBlackValue = recursiveBestMove(board, depth);
+    var bestBlackValue = recursiveBestMove(board, depth, bestValue);
     Undo(board, blackMoves[0]);
     for(var i = 1; i < blackMoves.length; i++) {
         Move(board, blackMoves[i]);
         var completeWhiteMove = whiteMove(board);
-        var currBlackValue = recursiveBestMove(board, depth);    
+        var currBlackValue = recursiveBestMove(board, depth, bestValue);    
         if (currBlackValue > bestBlackValue) {
             bestBlackValue = currBlackValue;
         }
